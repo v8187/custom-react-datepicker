@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
-import DatePicker from 'react-datepicker';
+// import DatePicker from 'react-datepicker';
+import DatePicker from './react-datepicker'
 
-import "react-datepicker/dist/react-datepicker.css";
+import './react-datepicker/react-datepicker.css';
 import './App.css';
 
 export default class App extends Component<any, any> {
