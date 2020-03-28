@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
-// import DatePicker from 'react-datepicker/es';
+import DatePicker from 'react-datepicker';
 // import DatePicker from './react-datepicker';
-import DatePicker from './es';
+import MultiDatePicker from './es';
 
 import './react-datepicker.css';
 import './App.css';
@@ -29,10 +29,11 @@ export default class App extends Component<any, state> {
           selected={this.state.selected}
           onChange={(evt) => this.handleSelected(evt)} /></div>
 
-        <div><DatePicker
+        <div><MultiDatePicker
           selectedMultiple={this.state.selectedMultiple}
           monthsShown={2}
-          selectNDates={true}
+          minDate={new Date()}
+          maxDate={new Date(2020, 3, 5)}
           onChange={(evt) => this.handleSelectedMultiple(evt)} /></div>
       </div>
     );

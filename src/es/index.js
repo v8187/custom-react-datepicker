@@ -1446,7 +1446,8 @@ var Day = function (_React$Component) {
       var dayClassName = _this.props.dayClassName ? _this.props.dayClassName(date) : undefined;
       return classnames("react-datepicker__day", dayClassName, "react-datepicker__day--" + getDayOfWeekCode(_this.props.day), {
         "react-datepicker__day--disabled": _this.isDisabled(),
-        "react-datepicker__day--selected": _this.isSameDay(_this.props.selected),
+        // "react-datepicker__day--selected": _this.isSameDay(_this.props.selected),
+        "react-datepicker__day--selected": (_this.props.preSelection.join().indexOf(this.props.day.toString()) !== -1),
         "react-datepicker__day--keyboard-selected": _this.isKeyboardSelected(),
         "react-datepicker__day--range-start": _this.isRangeStart(),
         "react-datepicker__day--range-end": _this.isRangeEnd(),
@@ -2063,7 +2064,7 @@ var Calendar = function (_React$Component) {
       var minDate = getEffectiveMinDate(_this.props);
       var maxDate = getEffectiveMaxDate(_this.props);
       var current = newDate();
-      var initialDate = openToDate || selected || preSelection;
+      var initialDate = openToDate || selected || preSelection[0];
       if (initialDate) {
         return initialDate;
       } else {
@@ -2554,9 +2555,12 @@ var Calendar = function (_React$Component) {
   };
 
   Calendar.prototype.componentDidUpdate = function componentDidUpdate(prevProps) {
-    if (this.props.preSelection && !isSameDay(this.props.preSelection, prevProps.preSelection)) {
+    if (this.props.preSelection &&
+      //  !isSameDay(this.props.preSelection, prevProps.preSelection)
+      JSON.stringify(this.props.preSelection) !== JSON.stringify(prevProps.preSelection)
+    ) {
       this.setState({
-        date: this.props.preSelection
+        date: this.props.preSelection[0] || new Date()
       });
     } else if (this.props.openToDate && !isSameDay(this.props.openToDate, prevProps.openToDate)) {
       this.setState({
@@ -2747,18 +2751,21 @@ var DatePicker = function (_React$Component) {
     var _this = possibleConstructorReturn(this, _React$Component.call(this, props));
 
     _this.getPreSelection = function () {
-      return _this.props.openToDate ? _this.props.openToDate : _this.props.selectsEnd && _this.props.startDate ? _this.props.startDate : _this.props.selectsStart && _this.props.endDate ? _this.props.endDate : newDate();
+      return [_this.props.openToDate ? _this.props.openToDate : _this.props.selectsEnd && _this.props.startDate ? _this.props.startDate : _this.props.selectsStart && _this.props.endDate ? _this.props.endDate : newDate()];
     };
 
     _this.calcInitialState = function () {
       var defaultPreSelection = _this.getPreSelection();
       var minDate = getEffectiveMinDate(_this.props);
       var maxDate = getEffectiveMaxDate(_this.props);
-      var boundedPreSelection = minDate && isBefore(defaultPreSelection, minDate) ? minDate : maxDate && isAfter(defaultPreSelection, maxDate) ? maxDate : defaultPreSelection;
+      var boundedPreSelection = minDate && isBefore(defaultPreSelection, minDate) ? [minDate] : maxDate && isAfter(defaultPreSelection, maxDate) ? [maxDate] : defaultPreSelection;
       return {
         open: _this.props.startOpen || false,
         preventFocus: false,
-        preSelection: _this.props.selected ? _this.props.selected : boundedPreSelection,
+        preSelection: (_this.props.selectedMultiple ? _this.props.selectedMultiple : _this.props.selected ? [_this.props.selected] : boundedPreSelection).map(dt => {
+          dt.setHours(0, 0, 0, 0);
+          return dt;
+        }),
         // transforming highlighted days (perhaps nested array)
         // to flat Map for faster access in day.jsx
         highlightDates: getHightLightDaysMap(_this.props.highlightDates),
@@ -2907,27 +2914,32 @@ var DatePicker = function (_React$Component) {
         return;
       }
 
-      if (!isEqual(_this.props.selected, changedDate) || _this.props.allowSameDay) {
+      // if (!isEqual(_this.props.selected, changedDate) || _this.props.allowSameDay) {
+      if (
+        (changedDate !== null && _this.props.selectedMultiple.join().indexOf(changedDate.toString()) === -1)
+        || _this.props.allowSameDay) {
         if (changedDate !== null) {
-          if (_this.props.selected) {
-            var selected = _this.props.selected;
-            if (keepInput) selected = newDate(changedDate);
+          if (_this.props.selectedMultiple) {
+            var selectedMultiple = _this.props.selectedMultiple;
+            if (selectedMultiple.join().indexOf(changedDate.toString()) === -1) {
+              selectedMultiple.push(newDate(changedDate));
+            }
             changedDate = setTime(changedDate, {
-              hour: getHours(selected),
-              minute: getMinutes(selected),
-              second: getSeconds(selected)
+              hour: getHours(changedDate),
+              minute: getMinutes(changedDate),
+              second: getSeconds(changedDate)
             });
           }
           if (!_this.props.inline) {
             _this.setState({
-              preSelection: changedDate
+              preSelection: selectedMultiple
             });
           }
           if (_this.props.inline && _this.props.monthsShown > 1 && !_this.props.inlineFocusSelectedMonth) {
             _this.setState({ monthSelectedIn: monthSelectedIn });
           }
         }
-        _this.props.onChange(changedDate, event);
+        _this.props.onChange(selectedMultiple, event);
       }
 
       _this.props.onSelect(changedDate, event);
@@ -2960,18 +2972,19 @@ var DatePicker = function (_React$Component) {
     };
 
     _this.handleTimeChange = function (time) {
-      var selected = _this.props.selected ? _this.props.selected : _this.getPreSelection();
+      var selected = _this.props.selectedMultiple ? _this.props.selectedMultiple : _this.props.selected ? [_this.props.selected] : _this.getPreSelection();
       var changedDate = setTime(selected, {
         hour: getHours(time),
         minute: getMinutes(time)
       });
-
+      const preSelection = _this.state.preSelection;
+      _this.props.selectedMultiple ? preSelection.push(changedDate) : (preSelection = changedDate);
       _this.setState({
-        preSelection: changedDate
+        preSelection: preSelection
       });
 
-      _this.props.onChange(changedDate);
-      if (_this.props.shouldCloseOnSelect) {
+      _this.props.onChange(preSelection);
+      if (!_this.props.selectedMultiple && _this.props.shouldCloseOnSelect) {
         _this.setOpen(false);
       }
       if (_this.props.showTimeInput) {
@@ -3196,7 +3209,10 @@ var DatePicker = function (_React$Component) {
       (this.props.selectedMultiple ?
         hasPreSelectionChanged(prevProps.selectedMultiple.join(), this.props.selectedMultiple.join()) :
         hasPreSelectionChanged(prevProps.selected, this.props.selected))) {
-      this.setPreSelection(this.props.selectedMultiple || this.props.selected);
+      this.setPreSelection(this.props.selectedMultiple.map(dt => {
+        dt.setHours(0, 0, 0, 0);
+        return dt;
+      }) || this.props.selected);
     }
     if (this.state.monthSelectedIn !== undefined && prevProps.monthsShown !== this.props.monthsShown) {
       this.setState({ monthSelectedIn: 0 });
