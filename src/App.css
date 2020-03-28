@@ -8,7 +8,15 @@ body,
 }
 
 .App {
- padding: 20px;
+  padding: 20px;
+  display: flex;
+  flex: 1;
+  box-sizing: border-box;
+  justify-content: space-around;
+}
+
+.App>div {
+  flex: 1;
 }
 
 .App-logo {
